@@ -52,13 +52,7 @@ const Product = sequelize.define('Product', {
   },
   image_url: {
     type: DataTypes.STRING(500),
-    allowNull: true,
-    validate: {
-      isUrl: {
-        args: true,
-        msg: 'Must be a valid URL'
-      }
-    }
+    allowNull: true
   },
   is_active: {
     type: DataTypes.BOOLEAN,

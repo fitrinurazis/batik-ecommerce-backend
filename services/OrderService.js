@@ -1,4 +1,4 @@
-const { Order, OrderItem, Product, sequelize } = require('../models/sequelize');
+const { Order, OrderItem, Product, Payment, sequelize } = require('../models/sequelize');
 const { Op } = require('sequelize');
 
 class OrderService {
@@ -91,6 +91,19 @@ class OrderService {
 
       const { count, rows } = await Order.findAndCountAll({
         where: whereConditions,
+        include: [
+          {
+            model: OrderItem,
+            as: 'items',
+            attributes: ['id', 'product_id', 'product_name', 'quantity', 'price', 'subtotal']
+          },
+          {
+            model: Payment,
+            as: 'payment',
+            required: false,
+            attributes: ['id', 'payment_status', 'payment_method', 'amount', 'payment_date', 'payment_proof', 'bank_name', 'account_holder', 'notes', 'rejection_reason']
+          }
+        ],
         order: [[sort, order]],
         limit: parseInt(limit),
         offset: offset,

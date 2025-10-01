@@ -35,7 +35,7 @@ const paymentController = {
         return res.status(400).json({ error: 'Bukti transfer wajib diupload' });
       }
 
-      const payment_proof = `/api/media/${req.file.filename}`;
+      const payment_proof = `/api/media/payments/${req.file.filename}`;
 
       if (payment) {
         // Update payment yang sudah ada

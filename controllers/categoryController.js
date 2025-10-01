@@ -1,9 +1,12 @@
-const CategoryService = require('../services/CategoryService');
+const { sequelize } = require('../config/sequelize');
+const Category = require('../models/sequelize/Category');
+const Product = require('../models/sequelize/Product');
 
 const categoryController = {
   async getCategories(req, res) {
     try {
-      const categories = await database.all(`
+      // Get all categories with product count using raw query
+      const [categories] = await sequelize.query(`
         SELECT
           c.*,
           COUNT(p.id) as product_count
@@ -16,13 +19,15 @@ const categoryController = {
       res.json(categories);
 
     } catch (error) {
+      console.error('getCategories error:', error);
       res.status(500).json({ error: 'Gagal mengambil kategori' });
     }
   },
 
   async getCategoriesWithProducts(req, res) {
     try {
-      const categories = await database.all(`
+      // Get categories that have products
+      const [categories] = await sequelize.query(`
         SELECT DISTINCT category as name, COUNT(*) as product_count
         FROM products
         WHERE is_active = 1
@@ -34,6 +39,7 @@ const categoryController = {
       res.json(categories);
 
     } catch (error) {
+      console.error('getCategoriesWithProducts error:', error);
       res.status(500).json({ error: 'Gagal mengambil kategori dengan produk' });
     }
   }
