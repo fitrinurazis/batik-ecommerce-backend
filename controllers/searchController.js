@@ -1,4 +1,4 @@
-const database = require('../database/config');
+const ProductService = require('../services/ProductService');
 
 const searchController = {
   async searchProducts(req, res) {

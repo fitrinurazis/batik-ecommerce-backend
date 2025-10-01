@@ -125,6 +125,8 @@ Thumbs.db
 
 # Session files
 sessions/
+whatsapp-session/
+.wwebjs_cache
 
 # SSL certificates
 *.pem

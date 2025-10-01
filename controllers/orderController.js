@@ -1,6 +1,7 @@
-const Order = require('../models/Order');
+const OrderService = require('../services/OrderService');
 const { validationResult } = require('express-validator');
 const emailService = require('../utils/emailService');
+const whatsappService = require('../services/WhatsAppService');
 
 const orderController = {
   async createOrder(req, res) {
@@ -15,9 +16,9 @@ const orderController = {
 
       const { order_data, items } = req.body;
 
-      await Order.validateOrderData(order_data, items);
-      const orderId = await Order.create(order_data, items);
-      const createdOrder = await Order.getById(orderId);
+      await OrderService.validateOrderData(order_data, items);
+      const orderId = await OrderService.create(order_data, items);
+      const createdOrder = await OrderService.getById(orderId);
 
       // Kirim email konfirmasi ke pelanggan
       if (order_data.customer_email) {
@@ -27,6 +28,14 @@ const orderController = {
         // Kirim notifikasi ke admin
         emailService.sendAdminNotification(createdOrder)
           .catch(error => console.log('Admin notification failed:', error.message));
+      }
+
+      // Kirim WhatsApp notification jika enabled dan ready
+      if (process.env.WHATSAPP_ENABLED === 'true' && order_data.customer_phone) {
+        if (whatsappService.isReady) {
+          whatsappService.sendOrderConfirmation(createdOrder)
+            .catch(error => console.log('WhatsApp notification failed:', error.message));
+        }
       }
 
       res.status(201).json({
@@ -65,7 +74,7 @@ const orderController = {
         order: order.toUpperCase()
       };
 
-      const result = await Order.getAll(options);
+      const result = await OrderService.getAll(options);
       res.json(result);
 
     } catch (error) {
@@ -76,7 +85,7 @@ const orderController = {
   async getOrder(req, res) {
     try {
       const { id } = req.params;
-      const order = await Order.getById(id);
+      const order = await OrderService.getById(id);
 
       if (!order) {
         return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
@@ -103,20 +112,29 @@ const orderController = {
         });
       }
 
-      const existingOrder = await Order.getById(id);
+      const existingOrder = await OrderService.getById(id);
       if (!existingOrder) {
         return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
       }
 
-      const updated = await Order.updateStatus(id, status);
+      const oldStatus = existingOrder.status;
+      const updated = await OrderService.updateStatus(id, status);
 
       if (updated) {
-        const updatedOrder = await Order.getById(id);
+        const updatedOrder = await OrderService.getById(id);
 
         // Kirim email update status ke pelanggan
-        if (updatedOrder.customer_email && status !== existingOrder.status) {
+        if (updatedOrder.customer_email && status !== oldStatus) {
           emailService.sendOrderStatusUpdate(updatedOrder, updatedOrder.customer_email, status)
             .catch(error => console.log('Status update email failed:', error.message));
+        }
+
+        // Kirim WhatsApp notification jika enabled dan ready
+        if (process.env.WHATSAPP_ENABLED === 'true' && updatedOrder.customer_phone && status !== oldStatus) {
+          if (whatsappService.isReady) {
+            whatsappService.sendOrderStatusUpdate(updatedOrder, oldStatus)
+              .catch(error => console.log('WhatsApp status update failed:', error.message));
+          }
         }
 
         res.json({
@@ -137,8 +155,8 @@ const orderController = {
       const { period = '30' } = req.query;
 
       const [statistics, statusCounts] = await Promise.all([
-        Order.getStatistics(period),
-        Order.getOrdersByStatus()
+        OrderService.getStatistics(period),
+        OrderService.getOrdersByStatus()
       ]);
 
       res.json({

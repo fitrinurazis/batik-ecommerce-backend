@@ -36,12 +36,18 @@ const idValidation = [
   param('id').isInt({ min: 1 }).withMessage('ID produk tidak valid')
 ];
 
+  /*  #swagger.tags = ['Products'] */
 router.get('/', sanitizeInput, productController.getProducts);
+  /*  #swagger.tags = ['Products'] */
 router.get('/featured', productController.getFeaturedProducts);
+  /*  #swagger.tags = ['Products'] */
 router.get('/recommended', productController.getRecommendedProducts);
+  /*  #swagger.tags = ['Products'] */
 router.get('/related/:id', idValidation, handleValidationErrors, productController.getRelatedProducts);
+  /*  #swagger.tags = ['Products'] */
 router.get('/:id', idValidation, handleValidationErrors, productController.getProduct);
 
+  /*  #swagger.tags = ['Products'] */
 router.post('/',
   authenticateToken,
   sanitizeInput,
@@ -50,6 +56,7 @@ router.post('/',
   productController.createProduct
 );
 
+  /*  #swagger.tags = ['Products'] */
 router.put('/:id',
   authenticateToken,
   sanitizeInput,
@@ -59,6 +66,7 @@ router.put('/:id',
   productController.updateProduct
 );
 
+  /*  #swagger.tags = ['Products'] */
 router.delete('/:id',
   authenticateToken,
   idValidation,

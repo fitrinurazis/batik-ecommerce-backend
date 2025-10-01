@@ -1,6 +1,7 @@
-const database = require('../database/config');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
+const OrderService = require('../services/OrderService');
+const ProductService = require('../services/ProductService');
+const { sequelize, Product, Order, OrderItem } = require('../models/sequelize');
+const { QueryTypes } = require('sequelize');
 
 const statsController = {
   async getDashboardStats(req, res) {
@@ -14,24 +15,36 @@ const statsController = {
         recentOrders,
         topProducts
       ] = await Promise.all([
-        database.get('SELECT COUNT(*) as count FROM products WHERE is_active = 1'),
+        sequelize.query('SELECT COUNT(*) as count FROM products WHERE is_active = 1', {
+          type: QueryTypes.SELECT,
+          plain: true
+        }),
 
-        database.get('SELECT COUNT(*) as count FROM orders'),
+        sequelize.query('SELECT COUNT(*) as count FROM orders', {
+          type: QueryTypes.SELECT,
+          plain: true
+        }),
 
-        database.get('SELECT SUM(total) as revenue FROM orders WHERE status != ?', ['cancelled']),
+        sequelize.query("SELECT SUM(total) as revenue FROM orders WHERE status != 'cancelled'", {
+          type: QueryTypes.SELECT,
+          plain: true
+        }),
 
-        database.get('SELECT COUNT(*) as count FROM orders WHERE status = ?', ['pending']),
+        sequelize.query("SELECT COUNT(*) as count FROM orders WHERE status = 'pending'", {
+          type: QueryTypes.SELECT,
+          plain: true
+        }),
 
-        Product.getLowStock(5),
+        ProductService.getLowStock(5),
 
-        database.all(`
+        sequelize.query(`
           SELECT id, customer_name, total, status, created_at
           FROM orders
           ORDER BY created_at DESC
           LIMIT 5
-        `),
+        `, { type: QueryTypes.SELECT }),
 
-        database.all(`
+        sequelize.query(`
           SELECT p.name, p.id, SUM(oi.quantity) as total_sold
           FROM products p
           JOIN order_items oi ON p.id = oi.product_id
@@ -40,7 +53,7 @@ const statsController = {
           GROUP BY p.id, p.name
           ORDER BY total_sold DESC
           LIMIT 5
-        `)
+        `, { type: QueryTypes.SELECT })
       ]);
 
       res.json({
@@ -61,21 +74,22 @@ const statsController = {
       });
 
     } catch (error) {
+      console.error('Dashboard stats error:', error);
       res.status(500).json({ error: 'Gagal mengambil statistik dashboard' });
     }
   },
 
   async getProductStats(req, res) {
     try {
-      const categoryStats = await database.all(`
+      const categoryStats = await sequelize.query(`
         SELECT category, COUNT(*) as count
         FROM products
         WHERE is_active = 1
         GROUP BY category
         ORDER BY count DESC
-      `);
+      `, { type: QueryTypes.SELECT });
 
-      const stockStatus = await database.all(`
+      const stockStatus = await sequelize.query(`
         SELECT
           CASE
             WHEN stock = 0 THEN 'Out of Stock'
@@ -93,9 +107,9 @@ const statsController = {
             WHEN stock <= 20 THEN 'Medium Stock'
             ELSE 'In Stock'
           END
-      `);
+      `, { type: QueryTypes.SELECT });
 
-      const productPerformance = await database.all(`
+      const productPerformance = await sequelize.query(`
         SELECT
           p.id,
           p.name,
@@ -110,7 +124,7 @@ const statsController = {
         GROUP BY p.id, p.name, p.price, p.stock
         ORDER BY units_sold DESC
         LIMIT 10
-      `);
+      `, { type: QueryTypes.SELECT });
 
       res.json({
         category_distribution: categoryStats,
@@ -119,7 +133,7 @@ const statsController = {
       });
 
     } catch (error) {
-      console.error('Stats error:', error);
+      console.error('Product stats error:', error);
       res.status(500).json({ error: 'Gagal mengambil statistik produk' });
     }
   },
@@ -134,11 +148,22 @@ const statsController = {
         salesTrend,
         avgOrderValue
       ] = await Promise.all([
-        Order.getStatistics(period),
+        sequelize.query(`
+          SELECT
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END) as total_revenue,
+            AVG(CASE WHEN status != 'cancelled' THEN total ELSE NULL END) as avg_order_value
+          FROM orders
+          WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ${parseInt(period)} DAY)
+        `, { type: QueryTypes.SELECT, plain: true }),
 
-        Order.getOrdersByStatus(),
+        sequelize.query(`
+          SELECT status, COUNT(*) as count
+          FROM orders
+          GROUP BY status
+        `, { type: QueryTypes.SELECT }),
 
-        database.all(`
+        sequelize.query(`
           SELECT
             DATE(created_at) as date,
             COUNT(*) as order_count,
@@ -148,9 +173,9 @@ const statsController = {
             AND status != 'cancelled'
           GROUP BY DATE(created_at)
           ORDER BY date ASC
-        `),
+        `, { type: QueryTypes.SELECT }),
 
-        database.all(`
+        sequelize.query(`
           SELECT
             status,
             COUNT(*) as order_count,
@@ -158,7 +183,7 @@ const statsController = {
             SUM(total) as total_value
           FROM orders
           GROUP BY status
-        `)
+        `, { type: QueryTypes.SELECT })
       ]);
 
       res.json({
@@ -170,6 +195,7 @@ const statsController = {
       });
 
     } catch (error) {
+      console.error('Order stats error:', error);
       res.status(500).json({ error: 'Gagal mengambil statistik pesanan' });
     }
   }

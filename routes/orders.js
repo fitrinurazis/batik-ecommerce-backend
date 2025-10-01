@@ -32,6 +32,7 @@ const idValidation = [
   param('id').isInt({ min: 1 }).withMessage('ID pesanan tidak valid')
 ];
 
+  /*  #swagger.tags = ['Orders'] */
 router.post('/',
   sanitizeInput,
   orderValidation,
@@ -39,17 +40,20 @@ router.post('/',
   orderController.createOrder
 );
 
+  /*  #swagger.tags = ['Orders'] */
 router.get('/',
   authenticateToken,
   sanitizeInput,
   orderController.getOrders
 );
 
+  /*  #swagger.tags = ['Orders'] */
 router.get('/stats',
   authenticateToken,
   orderController.getOrderStats
 );
 
+  /*  #swagger.tags = ['Orders'] */
 router.get('/:id',
   authenticateToken,
   idValidation,
@@ -57,6 +61,7 @@ router.get('/:id',
   orderController.getOrder
 );
 
+  /*  #swagger.tags = ['Orders'] */
 router.put('/:id/status',
   authenticateToken,
   sanitizeInput,

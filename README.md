@@ -24,16 +24,25 @@ cd batik-ecommerce/backend
 
 ```bash
 npm install
+npm install @whiskeysockets/baileys --legacy-peer-deps
+npm install @adiwajshing/baileys express mysql2 pino --legacy-peer-deps
+npm install qrcode-terminal --legacy-peer-deps
+npm install @whiskeysockets/baileys pino
+
+
+
 ```
 
 ### 3. Setup Database MySQL
 
 #### Buat Database:
+
 ```sql
 CREATE DATABASE batik_ecommerce;
 ```
 
 #### Buat User Database (opsional):
+
 ```sql
 CREATE USER 'batik_user'@'localhost' IDENTIFIED BY 'password123';
 GRANT ALL PRIVILEGES ON batik_ecommerce.* TO 'batik_user'@'localhost';
@@ -43,6 +52,7 @@ FLUSH PRIVILEGES;
 ### 4. Konfigurasi Environment
 
 Salin file environment example:
+
 ```bash
 cp .env.example .env
 ```
@@ -86,11 +96,13 @@ npm run migrate
 ### 6. Jalankan Server
 
 #### Mode Development (dengan auto-restart):
+
 ```bash
 npm run dev
 ```
 
 #### Mode Production:
+
 ```bash
 npm start
 ```
@@ -131,6 +143,7 @@ backend/
 ## 🔌 API Endpoints
 
 ### Products
+
 - `GET /api/products` - List semua produk
 - `GET /api/products/:id` - Detail produk
 - `POST /api/products` - Tambah produk (admin)
@@ -141,6 +154,7 @@ backend/
 - `GET /api/products/related/:id` - Produk terkait
 
 ### Orders
+
 - `POST /api/orders` - Buat pesanan baru
 - `GET /api/orders` - List pesanan (admin)
 - `GET /api/orders/:id` - Detail pesanan
@@ -148,13 +162,16 @@ backend/
 - `GET /api/orders/stats` - Statistik pesanan
 
 ### Upload
+
 - `POST /api/upload/product-image` - Upload gambar produk (admin)
 
 ### Email (Admin)
+
 - `POST /api/email/test-connection` - Test koneksi email
 - `POST /api/email/send-test` - Kirim email test
 
 ### Statistics (Admin)
+
 - `GET /api/stats/dashboard` - Data dashboard
 - `GET /api/stats/products` - Statistik produk
 - `GET /api/stats/orders` - Statistik penjualan
@@ -164,11 +181,13 @@ backend/
 ### Menggunakan curl:
 
 #### Test koneksi server:
+
 ```bash
 curl http://localhost:3000/api/products
 ```
 
 #### Test create order:
+
 ```bash
 curl -X POST http://localhost:3000/api/orders \
   -H "Content-Type: application/json" \
@@ -195,24 +214,29 @@ curl -X POST http://localhost:3000/api/orders \
 ```
 
 ### Menggunakan Postman:
+
 Impor file `postman_collection.json` (jika tersedia) atau buat request manual sesuai endpoint di atas.
 
 ## 🛠️ Troubleshooting
 
 ### Error: "Cannot connect to database"
+
 - Pastikan MySQL server berjalan
 - Periksa konfigurasi database di file `.env`
 - Pastikan database `batik_ecommerce` sudah dibuat
 
 ### Error: "Port 3000 already in use"
+
 - Ubah PORT di file `.env` ke port lain (misalnya 3001)
 - Atau stop process yang menggunakan port 3000
 
 ### Error: "JWT must be provided"
+
 - Pastikan JWT_SECRET di file `.env` sudah diset
 - JWT_SECRET harus string yang panjang dan kompleks
 
 ### Error: Upload file gagal
+
 - Pastikan folder `uploads/` ada dan memiliki permission write
 - Periksa ukuran file (max 5MB default)
 - Pastikan format file yang diupload sesuai (jpg, jpeg, png, webp)
@@ -220,18 +244,23 @@ Impor file `postman_collection.json` (jika tersedia) atau buat request manual se
 ## 🔧 Development
 
 ### Menambah Endpoint Baru
+
 1. Buat controller di folder `controllers/`
 2. Tambah route di folder `routes/`
 3. Daftarkan route di `server.js`
 4. Tambah middleware jika diperlukan
 
 ### Database Migration
+
 Untuk menambah tabel atau mengubah struktur database:
+
 1. Edit file `database/schema.sql`
 2. Jalankan `npm run migrate`
 
 ### Environment Variables
+
 Semua konfigurasi sensitif disimpan di file `.env`:
+
 - Database credentials
 - JWT secret key
 - Email configuration
@@ -241,6 +270,7 @@ Semua konfigurasi sensitif disimpan di file `.env`:
 ## 🚀 Deployment
 
 ### Persiapan Production
+
 1. Set `NODE_ENV=production` di environment variables
 2. Gunakan database MySQL production
 3. Set JWT_SECRET yang kuat
@@ -249,6 +279,7 @@ Semua konfigurasi sensitif disimpan di file `.env`:
 6. Setup process manager (PM2, forever, dll)
 
 ### Menggunakan PM2
+
 ```bash
 # Install PM2
 npm install -g pm2
@@ -281,6 +312,7 @@ Project ini menggunakan lisensi MIT - lihat file [LICENSE](LICENSE) untuk detail
 ## 🆘 Support
 
 Jika mengalami masalah atau memiliki pertanyaan:
+
 - Buat issue di repository GitHub
 - Email: support@batiknusantara.com
 - Dokumentasi API: `http://localhost:3000/api-docs` (jika tersedia)
@@ -288,4 +320,28 @@ Jika mengalami masalah atau memiliki pertanyaan:
 ---
 
 **Batik Nusantara E-commerce Backend**
-*Preserving Indonesian Heritage Through Technology*
+_Preserving Indonesian Heritage Through Technology_
+
+Priority 1 (Critical)
+
+1. Implementasi testing framework dan test  
+   coverage
+2. Setup connection pooling untuk database
+3. Implementasi proper error handling dan  
+   logging
+4. Security hardening - refresh tokens,  
+   password policies
+
+Priority 2 (High)
+
+1. API documentation dengan Swagger
+2. Caching layer implementation
+3. TypeScript migration
+4. Docker containerization
+
+Priority 3 (Medium)
+
+1. Performance optimization
+2. Code quality tools (ESLint, Prettier)
+3. Monitoring dan alerting
+4. CI/CD pipeline

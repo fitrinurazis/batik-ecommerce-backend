@@ -1,4 +1,4 @@
-const database = require('../database/config');
+const CategoryService = require('../services/CategoryService');
 
 const categoryController = {
   async getCategories(req, res) {
