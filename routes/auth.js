@@ -258,4 +258,62 @@ router.post(
   })
 );
 
+  /*  #swagger.tags = ['Authentication'] */
+router.put(
+  "/change-password",
+  authenticateToken,
+  sanitizeInput,
+  [
+    body("currentPassword")
+      .isLength({ min: 1 })
+      .withMessage("Password saat ini diperlukan"),
+    body("newPassword")
+      .isLength({ min: 6 })
+      .withMessage("Password baru minimal 6 karakter"),
+  ],
+  handleValidationErrors,
+  asyncHandler(async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    // Get user from database
+    const user = await AdminUser.findByPk(userId);
+
+    if (!user) {
+      throw new AuthenticationError("User tidak ditemukan");
+    }
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      user.password_hash
+    );
+
+    if (!validPassword) {
+      await logger.securityEvent("CHANGE_PASSWORD_FAILED_WRONG_PASSWORD", req, {
+        userId,
+      });
+      throw new AuthenticationError("Password saat ini tidak valid");
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await user.update({
+      password_hash: newPasswordHash,
+    });
+
+    await logger.securityEvent("PASSWORD_CHANGED", req, {
+      userId,
+      username: user.username,
+    });
+
+    res.json({
+      message: "Password berhasil diubah",
+    });
+  })
+);
+
 module.exports = router;

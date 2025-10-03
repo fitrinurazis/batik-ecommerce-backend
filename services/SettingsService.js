@@ -110,20 +110,18 @@ class SettingsService {
         order: [['category', 'ASC'], ['key', 'ASC']]
       });
 
-      const result = {};
-      settings.forEach(setting => {
-        if (!result[setting.category]) {
-          result[setting.category] = {};
-        }
-        result[setting.category][setting.key] = {
-          value: setting.getParsedValue(),
-          type: setting.type,
-          description: setting.description,
-          is_public: setting.is_public
-        };
-      });
-
-      return result;
+      // Return as array (sesuai API_SETTINGS.md)
+      return settings.map(setting => ({
+        id: setting.id,
+        key: setting.key,
+        value: setting.getParsedValue(),
+        type: setting.type,
+        category: setting.category,
+        description: setting.description,
+        is_public: setting.is_public,
+        created_at: setting.created_at,
+        updated_at: setting.updated_at
+      }));
     } catch (error) {
       throw new Error(`Error getting all settings: ${error.message}`);
     }
@@ -132,6 +130,50 @@ class SettingsService {
   static async updateSettings(updates) {
     try {
       const results = {};
+
+      // Helper function to determine category from key name
+      const getCategoryFromKey = (key) => {
+        // Shop settings
+        if (key.startsWith('shop_')) return 'shop';
+
+        // Site/General settings
+        if (key.startsWith('site_') || ['currency', 'timezone', 'language', 'maintenance_mode', 'maintenance_message'].includes(key)) {
+          return 'general';
+        }
+
+        // Notification settings (SMTP & WhatsApp)
+        if (key.startsWith('smtp_') || key.startsWith('admin_') || key.startsWith('whatsapp_') || key === 'email_from_name') {
+          return 'notification';
+        }
+
+        // Payment settings
+        if (key.startsWith('payment_') || key.startsWith('bank_') || key.startsWith('ewallet_') || key.startsWith('cod_') || key === 'auto_cancel_unpaid_orders') {
+          return 'payment';
+        }
+
+        // Shipping settings
+        if (key.startsWith('shipping_') || key.startsWith('rajaongkir_') || key === 'free_shipping_enabled' || key === 'free_shipping_min_amount' || key === 'flat_shipping_rate' || key === 'processing_time_days' || key === 'weight_unit') {
+          return 'shipping';
+        }
+
+        // Order settings
+        if (key.startsWith('order_') || key.startsWith('min_order_') || key.startsWith('max_order_') || key === 'guest_checkout_enabled') {
+          return 'order';
+        }
+
+        // Discount settings
+        if (key.startsWith('coupon_') || key.startsWith('referral_')) {
+          return 'discount';
+        }
+
+        // Tax settings
+        if (key.startsWith('tax_')) {
+          return 'tax';
+        }
+
+        // Default to general
+        return 'general';
+      };
 
       for (const [key, value] of Object.entries(updates)) {
         let setting = await Setting.findOne({ where: { key } });
@@ -142,15 +184,27 @@ class SettingsService {
           await setting.save();
           results[key] = setting.getParsedValue();
         } else {
-          // Create new setting with default values
+          // Determine type from value
+          let type = 'string';
+          if (typeof value === 'number') {
+            type = 'number';
+          } else if (typeof value === 'boolean') {
+            type = 'boolean';
+          } else if (typeof value === 'object' && value !== null) {
+            type = 'json';
+          }
+
+          // Determine category from key name
+          const category = getCategoryFromKey(key);
+
+          // Create new setting
           setting = await Setting.create({
             key,
             value: null,
-            type: typeof value === 'number' ? 'number' :
-                  typeof value === 'boolean' ? 'boolean' : 'string',
-            category: 'general',
+            type,
+            category,
             description: null,
-            is_public: true
+            is_public: !key.includes('password') && !key.includes('pass') && !key.includes('secret') && !key.includes('key')
           });
           setting.setValue(value);
           await setting.save();

@@ -7,14 +7,30 @@ class WhatsAppService {
     this.client = null;
     this.isReady = false;
     this.qrCode = null;
+    this.justConnected = false; // Flag untuk notifikasi
   }
 
-  initialize() {
+  async initialize(forceRestart = false) {
+    // If force restart, destroy existing client first
+    if (forceRestart && this.client) {
+      console.log('🔄 Force restarting WhatsApp client...');
+      try {
+        await this.client.destroy();
+        this.client = null;
+        this.isReady = false;
+        this.qrCode = null;
+      } catch (err) {
+        console.error('Error destroying client:', err.message);
+      }
+    }
+
     if (this.client) {
+      console.log('WhatsApp client already initialized');
       return;
     }
 
     try {
+      console.log('🚀 Initializing WhatsApp client...');
       this.client = new Client({
         authStrategy: new LocalAuth({
           dataPath: "./whatsapp-session",
@@ -36,9 +52,18 @@ class WhatsAppService {
       // QR Code untuk scan pertama kali
       this.client.on("qr", (qr) => {
         console.log("\n📱 Scan QR Code ini dengan WhatsApp:");
+        console.log("QR Code length:", qr.length);
         qrcode.generate(qr, { small: true });
         this.qrCode = qr;
-        logger.info("WhatsApp QR Code generated");
+        logger.info("WhatsApp QR Code generated", { qrLength: qr.length });
+
+        // QR code expires in 60 seconds, reset after that
+        setTimeout(() => {
+          if (this.qrCode === qr && !this.isReady) {
+            console.log("⚠️  QR Code expired, waiting for new one...");
+            this.qrCode = null;
+          }
+        }, 60000);
       });
 
       // WhatsApp ready
@@ -46,7 +71,13 @@ class WhatsAppService {
         console.log("✅ WhatsApp Client is ready!");
         this.isReady = true;
         this.qrCode = null;
+        this.justConnected = true; // Set flag untuk notifikasi
         logger.info("WhatsApp client connected successfully");
+
+        // Reset flag setelah 10 detik
+        setTimeout(() => {
+          this.justConnected = false;
+        }, 10000);
       });
 
       // Authenticated
@@ -234,6 +265,7 @@ Terima kasih! 🙏`;
       isReady: this.isReady,
       hasQR: !!this.qrCode,
       qrCode: this.qrCode,
+      justConnected: this.justConnected,
     };
   }
 

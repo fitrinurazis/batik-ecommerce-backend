@@ -28,9 +28,10 @@ router.get('/status', authenticateToken, (req, res) => {
 });
 
 // Initialize WhatsApp connection
-router.post('/init', authenticateToken, (req, res) => {
+router.post('/init', authenticateToken, async (req, res) => {
   try {
-    whatsappService.initialize();
+    const { forceRestart } = req.body;
+    await whatsappService.initialize(forceRestart);
     res.json({
       success: true,
       message: 'WhatsApp initialization started. Check logs for QR code.'
