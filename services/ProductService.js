@@ -72,7 +72,7 @@ class ProductService {
   static async create(productData) {
     try {
       const {
-        name, description, category, price, stock, discount = 0, image_url
+        name, description, category, price, stock, discount = 0, image_url, images
       } = productData;
 
       const product = await Product.create({
@@ -82,7 +82,8 @@ class ProductService {
         price: price || 0,
         stock: stock || 0,
         discount: discount || 0,
-        image_url: image_url || null
+        image_url: image_url || null,
+        images: images || []
       });
 
       return product.toJSON();
@@ -94,10 +95,10 @@ class ProductService {
   static async update(id, productData) {
     try {
       const {
-        name, description, category, price, stock, discount, image_url, is_active
+        name, description, category, price, stock, discount, image_url, images, is_active
       } = productData;
 
-      const [affectedRows] = await Product.update({
+      const updateData = {
         name: name || null,
         description: description || null,
         category: category || null,
@@ -106,7 +107,14 @@ class ProductService {
         discount: discount || 0,
         image_url: image_url || null,
         is_active: is_active !== undefined ? (is_active ? true : false) : true
-      }, {
+      };
+
+      // Only update images if provided
+      if (images !== undefined) {
+        updateData.images = images;
+      }
+
+      const [affectedRows] = await Product.update(updateData, {
         where: { id },
         returning: true
       });

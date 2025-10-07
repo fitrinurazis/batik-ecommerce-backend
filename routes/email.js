@@ -86,4 +86,53 @@ router.post('/send-test',
   }
 );
 
+router.post('/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message, to } = req.body;
+
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Semua field wajib diisi'
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format email tidak valid'
+      });
+    }
+
+    const contactData = {
+      name: name.trim(),
+      email: email.trim(),
+      subject: subject.trim(),
+      message: message.trim()
+    };
+
+    const success = await emailService.sendContactForm(contactData, to);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Pesan berhasil dikirim'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Gagal mengirim pesan. Email belum dikonfigurasi.'
+      });
+    }
+  } catch (error) {
+    console.error('Contact form error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan saat mengirim pesan',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;

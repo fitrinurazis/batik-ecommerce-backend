@@ -56,6 +56,72 @@ const uploadController = {
     }
   },
 
+  async uploadProductImages(req, res) {
+    try {
+      console.log('Upload Controller - Multiple images request received');
+      console.log('Upload Controller - Files count:', req.files ? req.files.length : 0);
+
+      if (!req.files || req.files.length === 0) {
+        console.log('Upload Controller - No files in request');
+        return res.status(400).json({ error: 'Tidak ada file yang diupload' });
+      }
+
+      const uploadedImages = [];
+      const uploadedThumbnails = [];
+
+      // Process each file
+      for (const file of req.files) {
+        console.log('Upload Controller - Processing file:', file.originalname);
+
+        // Validate image
+        await validateImage(file.buffer);
+
+        // Process main image
+        const mainImage = await processImage(file.buffer, file.originalname);
+        console.log('Upload Controller - Main image processed:', mainImage);
+
+        // Generate thumbnail
+        const thumbnail = await generateThumbnail(file.buffer, file.originalname);
+        console.log('Upload Controller - Thumbnail generated:', thumbnail);
+
+        uploadedImages.push({
+          url: `/api/media/${mainImage}`,
+          filename: mainImage
+        });
+
+        uploadedThumbnails.push({
+          url: `/api/media/${thumbnail}`,
+          filename: thumbnail
+        });
+      }
+
+      res.json({
+        message: `${uploadedImages.length} gambar berhasil diupload`,
+        success: true,
+        images: uploadedImages,
+        thumbnails: uploadedThumbnails,
+        count: uploadedImages.length
+      });
+
+    } catch (error) {
+      console.error('Upload Controller - Error:', error);
+
+      if (error.message === 'Invalid image file') {
+        return res.status(400).json({ error: 'Format file gambar tidak valid' });
+      }
+
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'Ukuran file terlalu besar' });
+      }
+
+      if (error.code === 'LIMIT_FILE_COUNT') {
+        return res.status(400).json({ error: 'Terlalu banyak file. Maksimal 5 gambar' });
+      }
+
+      res.status(500).json({ error: 'Gagal mengupload gambar' });
+    }
+  },
+
   async serveFile(req, res) {
     try {
       const { filename } = req.params;

@@ -156,6 +156,52 @@ class OrderService {
     }
   }
 
+  static async updatePaymentProof(id, paymentProofUrl, bank, paymentMethod = null) {
+    try {
+      // Get the order to get the total amount
+      const order = await Order.findByPk(id);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      // Determine payment method if not provided
+      let method = paymentMethod;
+      if (!method) {
+        // Default to transfer_bank if not specified
+        method = 'transfer_bank';
+      }
+
+      // Check if payment record already exists
+      const existingPayment = await Payment.findOne({ where: { order_id: id } });
+
+      if (existingPayment) {
+        // Update existing payment
+        await existingPayment.update({
+          payment_proof: paymentProofUrl,
+          bank_name: bank,
+          payment_method: method,
+          payment_status: 'pending',
+          payment_date: new Date()
+        });
+      } else {
+        // Create new payment record
+        await Payment.create({
+          order_id: id,
+          payment_method: method,
+          bank_name: bank,
+          amount: order.total,
+          payment_proof: paymentProofUrl,
+          payment_status: 'pending',
+          payment_date: new Date()
+        });
+      }
+
+      return true;
+    } catch (error) {
+      throw new Error(`Error updating payment proof: ${error.message}`);
+    }
+  }
+
   static async getStatistics(period = '30') {
     try {
       const daysAgo = new Date();

@@ -28,7 +28,7 @@ const Product = sequelize.define('Product', {
     }
   },
   price: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.DECIMAL(15, 2),
     allowNull: false,
     validate: {
       min: 0
@@ -53,6 +53,17 @@ const Product = sequelize.define('Product', {
   image_url: {
     type: DataTypes.STRING(500),
     allowNull: true
+  },
+  images: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    get() {
+      const rawValue = this.getDataValue('images');
+      return rawValue ? JSON.parse(rawValue) : [];
+    },
+    set(value) {
+      this.setDataValue('images', value ? JSON.stringify(value) : null);
+    }
   },
   is_active: {
     type: DataTypes.BOOLEAN,

@@ -11,4 +11,10 @@ router.post('/product-image',
   uploadController.uploadProductImage
 );
 
+router.post('/product-images',
+  authenticateToken,
+  upload.array('images', 5),
+  uploadController.uploadProductImages
+);
+
 module.exports = router;

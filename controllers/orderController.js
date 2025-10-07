@@ -2,6 +2,8 @@ const OrderService = require('../services/OrderService');
 const { validationResult } = require('express-validator');
 const emailService = require('../utils/emailService');
 const whatsappService = require('../services/WhatsAppService');
+const { upload, processImage } = require('../utils/upload');
+const multer = require('multer');
 
 const orderController = {
   async createOrder(req, res) {
@@ -168,6 +170,78 @@ const orderController = {
     } catch (error) {
       res.status(500).json({ error: 'Gagal mengambil statistik pesanan' });
     }
+  },
+
+  async uploadPaymentProof(req, res) {
+    // Use multer middleware
+    upload.single('payment_proof')(req, res, async (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: 'Error upload file: ' + err.message });
+      } else if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      try {
+        const { order_id, bank, payment_method } = req.body;
+
+        if (!order_id) {
+          return res.status(400).json({ error: 'Order ID diperlukan' });
+        }
+
+        if (!req.file) {
+          return res.status(400).json({ error: 'File bukti pembayaran diperlukan' });
+        }
+
+        // Get order
+        const order = await OrderService.getById(order_id);
+        if (!order) {
+          return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+        }
+
+        // Process and save payment proof image
+        const filename = await processImage(req.file.buffer, req.file.originalname);
+        const paymentProofUrl = `/api/media/${filename}`;
+
+        // Update order with payment proof
+        await OrderService.updatePaymentProof(order_id, paymentProofUrl, bank, payment_method);
+
+        // Get updated order
+        const updatedOrder = await OrderService.getById(order_id);
+
+        // Send confirmation email
+        if (updatedOrder.customer_email) {
+          const paymentData = {
+            bank: bank,
+            payment_proof: paymentProofUrl,
+            upload_date: new Date()
+          };
+          emailService.sendPaymentUploadConfirmation(updatedOrder, paymentData)
+            .catch(error => console.log('Payment confirmation email failed:', error.message));
+        }
+
+        // Send WhatsApp notification
+        if (process.env.WHATSAPP_ENABLED === 'true' && updatedOrder.customer_phone) {
+          if (whatsappService.isReady) {
+            whatsappService.sendPaymentConfirmation(updatedOrder)
+              .catch(error => console.log('WhatsApp payment confirmation failed:', error.message));
+          }
+        }
+
+        res.json({
+          message: 'Bukti pembayaran berhasil diupload',
+          order: updatedOrder,
+          payment_proof: paymentProofUrl,
+          notifications: {
+            email: updatedOrder.customer_email,
+            phone: updatedOrder.customer_phone
+          }
+        });
+
+      } catch (error) {
+        console.error('Upload payment proof error:', error);
+        res.status(500).json({ error: 'Gagal mengupload bukti pembayaran' });
+      }
+    });
   }
 };
 

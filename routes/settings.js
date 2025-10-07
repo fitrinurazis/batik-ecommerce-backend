@@ -1,7 +1,26 @@
 const express = require("express");
 const router = express.Router();
 const SettingsService = require("../services/SettingsService");
+const settingsController = require("../controllers/settingsController");
 const { authenticateToken } = require("../middleware/auth");
+
+// Payment Methods endpoints (public)
+  /*  #swagger.tags = ['Settings'] */
+router.get("/payment-methods", settingsController.getPaymentMethods);
+
+// Payment Settings endpoints (admin)
+router.get("/payment", authenticateToken, settingsController.getPaymentSettings);
+router.put("/payment", authenticateToken, settingsController.updatePaymentSettings);
+
+// Bank accounts management (admin)
+router.post("/payment/bank-accounts", authenticateToken, settingsController.addBankAccount);
+router.put("/payment/bank-accounts/:index", authenticateToken, settingsController.updateBankAccount);
+router.delete("/payment/bank-accounts/:index", authenticateToken, settingsController.deleteBankAccount);
+
+// E-wallet accounts management (admin)
+router.post("/payment/ewallet-accounts", authenticateToken, settingsController.addEwalletAccount);
+router.put("/payment/ewallet-accounts/:index", authenticateToken, settingsController.updateEwalletAccount);
+router.delete("/payment/ewallet-accounts/:index", authenticateToken, settingsController.deleteEwalletAccount);
 
   /*  #swagger.tags = ['Settings'] */
 router.get("/public", async (req, res) => {

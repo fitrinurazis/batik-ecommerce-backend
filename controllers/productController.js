@@ -91,7 +91,11 @@ const productController = {
       });
 
     } catch (error) {
-      res.status(500).json({ error: 'Gagal memperbarui produk' });
+      console.error('Update product error:', error);
+      res.status(500).json({
+        error: 'Gagal memperbarui produk',
+        details: error.message
+      });
     }
   },
 

@@ -812,6 +812,107 @@ class EmailService {
       return false;
     }
   }
+
+  async sendContactForm(contactData, adminEmail) {
+    if (!this.transporter || !process.env.SMTP_USER) {
+      console.log('Email not configured, skipping contact form');
+      return false;
+    }
+
+    const emailTo = adminEmail || process.env.ADMIN_EMAIL;
+
+    if (!emailTo) {
+      console.log('Admin email not configured');
+      return false;
+    }
+
+    const emailTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Pesan Kontak Baru</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 0; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1);">
+
+          <div style="background: #d97706; color: white; padding: 30px 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">📧 Pesan Kontak Baru</h1>
+          </div>
+
+          <div style="padding: 30px 20px;">
+            <div style="margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #f39c12;">
+              <h4 style="margin-top: 0; color: #856404;">📋 ${contactData.subject}</h4>
+              <p style="margin: 5px 0;">Anda menerima pesan baru dari contact form website.</p>
+            </div>
+
+            <div style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px;">
+              <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Informasi Pengirim</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #666; width: 40%;">Nama:</td>
+                  <td style="padding: 8px 0; font-weight: bold; color: #333;">${contactData.name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666;">Email:</td>
+                  <td style="padding: 8px 0; color: #333;">${contactData.email}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666;">Subjek:</td>
+                  <td style="padding: 8px 0; color: #333;">${contactData.subject}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666;">Tanggal:</td>
+                  <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString('id-ID')}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="margin: 30px 0; padding: 20px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Pesan</h3>
+              <div style="padding: 15px; background: #f9f9f9; border-radius: 5px;">
+                <p style="margin: 0; color: #333; white-space: pre-wrap;">${contactData.message}</p>
+              </div>
+            </div>
+
+            <div style="margin: 30px 0; padding: 20px; background: #e8f4f8; border-radius: 8px;">
+              <p style="margin: 0; font-size: 14px; color: #333;">
+                <strong>📞 Untuk membalas:</strong><br>
+                Silakan balas langsung ke email: <a href="mailto:${contactData.email}" style="color: #d97706;">${contactData.email}</a>
+              </p>
+            </div>
+          </div>
+
+          <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+            <p style="margin: 0 0 5px 0; color: #999; font-size: 12px;">
+              Pesan ini dikirim otomatis dari contact form website
+            </p>
+            <p style="margin: 5px 0; color: #666; font-size: 12px;">
+              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+            </p>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      await this.transporter.sendMail({
+        from: `"${contactData.name}" <${process.env.SMTP_USER}>`,
+        to: emailTo,
+        replyTo: contactData.email,
+        subject: `[Contact Form] ${contactData.subject} - dari ${contactData.name}`,
+        html: emailTemplate
+      });
+
+      console.log(`Contact form email sent to ${emailTo}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to send contact form email:', error.message);
+      return false;
+    }
+  }
 }
 
 module.exports = new EmailService();

@@ -29,6 +29,29 @@ const productValidation = [
 
     throw new Error('URL gambar tidak valid');
   }),
+  body('images').optional().custom((value) => {
+    // Allow array or null/undefined
+    if (!value) return true;
+
+    // Must be an array
+    if (!Array.isArray(value)) {
+      throw new Error('Images harus berupa array');
+    }
+
+    // Max 5 images
+    if (value.length > 5) {
+      throw new Error('Maksimal 5 gambar');
+    }
+
+    // Each image must be a valid URL string
+    for (const url of value) {
+      if (typeof url !== 'string') {
+        throw new Error('Setiap image harus berupa string URL');
+      }
+    }
+
+    return true;
+  }),
   body('is_active').optional().isBoolean().withMessage('is_active harus berupa boolean')
 ];
 

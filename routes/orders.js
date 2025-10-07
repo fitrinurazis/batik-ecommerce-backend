@@ -71,4 +71,9 @@ router.put('/:id/status',
   orderController.updateOrderStatus
 );
 
+  /*  #swagger.tags = ['Orders'] */
+router.post('/payment',
+  orderController.uploadPaymentProof
+);
+
 module.exports = router;
