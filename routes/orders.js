@@ -54,6 +54,14 @@ router.get('/stats',
 );
 
   /*  #swagger.tags = ['Orders'] */
+// Public endpoint for tracking orders
+router.get('/track/:id',
+  idValidation,
+  handleValidationErrors,
+  orderController.trackOrder
+);
+
+  /*  #swagger.tags = ['Orders'] */
 router.get('/:id',
   authenticateToken,
   idValidation,

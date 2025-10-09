@@ -1,4 +1,5 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
+const notificationConfig = require("./notificationConfig");
 
 class EmailService {
   constructor() {
@@ -8,67 +9,84 @@ class EmailService {
 
   initializeTransporter() {
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true',
+      secure: process.env.SMTP_SECURE === "true",
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+        pass: process.env.SMTP_PASS,
+      },
     });
   }
 
   async sendOrderConfirmation(orderData, customerEmail) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping order confirmation');
+      console.log("Email not configured, skipping order confirmation");
       return false;
     }
 
-    const emailTemplate = this.getOrderConfirmationTemplate(orderData);
+    const config = await notificationConfig.getAll();
+    const emailTemplate = this.getOrderConfirmationTemplate(
+      orderData,
+      config.frontend_url
+    );
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: customerEmail,
         subject: `Konfirmasi Pesanan #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
       console.log(`Email konfirmasi pesanan dikirim ke ${customerEmail}`);
       return true;
     } catch (error) {
-      console.error('Gagal mengirim email:', error.message);
+      console.error("Gagal mengirim email:", error.message);
       return false;
     }
   }
 
   async sendOrderStatusUpdate(orderData, customerEmail, newStatus) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping status update');
+      console.log("Email not configured, skipping status update");
       return false;
     }
 
-    const emailTemplate = this.getStatusUpdateTemplate(orderData, newStatus);
+    const config = await notificationConfig.getAll();
+    const emailTemplate = this.getStatusUpdateTemplate(
+      orderData,
+      newStatus,
+      config.frontend_url
+    );
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: customerEmail,
         subject: `Update Status Pesanan #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
       console.log(`Email update status dikirim ke ${customerEmail}`);
       return true;
     } catch (error) {
-      console.error('Gagal mengirim email update status:', error.message);
+      console.error("Gagal mengirim email update status:", error.message);
       return false;
     }
   }
 
   async sendAdminNotification(orderData) {
-    if (!this.transporter || !process.env.SMTP_USER || !process.env.ADMIN_EMAIL) {
-      console.log('Email not configured, skipping admin notification');
+    if (
+      !this.transporter ||
+      !process.env.SMTP_USER ||
+      !process.env.ADMIN_EMAIL
+    ) {
+      console.log("Email not configured, skipping admin notification");
       return false;
     }
 
@@ -76,36 +94,54 @@ class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: process.env.ADMIN_EMAIL,
         subject: `Pesanan Baru #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
-      console.log('Email notifikasi admin dikirim');
+      console.log("Email notifikasi admin dikirim");
       return true;
     } catch (error) {
-      console.error('Gagal mengirim email notifikasi admin:', error.message);
+      console.error("Gagal mengirim email notifikasi admin:", error.message);
       return false;
     }
   }
 
-  getOrderConfirmationTemplate(orderData) {
+  getOrderConfirmationTemplate(
+    orderData,
+    frontendUrl = "http://localhost:3001"
+  ) {
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
-    const itemsHtml = orderData.items?.map(item => `
+    const itemsHtml =
+      orderData.items
+        ?.map(
+          (item) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name || 'Produk'}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(item.price)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(item.subtotal)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${
+          item.product_name || "Produk"
+        }</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${
+          item.quantity
+        }</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(
+          item.price
+        )}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(
+          item.subtotal
+        )}</td>
       </tr>
-    `).join('') || '';
+    `
+        )
+        .join("") || "";
 
     return `
       <!DOCTYPE html>
@@ -152,20 +188,39 @@ class EmailService {
             </div>
 
             <div style="margin: 20px 0; text-align: right;">
-              <p><strong>Subtotal: ${formatCurrency(orderData.subtotal)}</strong></p>
-              ${orderData.shipping_cost ? `<p>Ongkir: ${formatCurrency(orderData.shipping_cost)}</p>` : ''}
-              <h3 style="color: #d4691a;">Total: ${formatCurrency(orderData.total)}</h3>
+              <p><strong>Subtotal: ${formatCurrency(
+                orderData.subtotal
+              )}</strong></p>
+              ${
+                orderData.shipping_cost
+                  ? `<p>Ongkir: ${formatCurrency(orderData.shipping_cost)}</p>`
+                  : ""
+              }
+              <h3 style="color: #d4691a;">Total: ${formatCurrency(
+                orderData.total
+              )}</h3>
             </div>
 
             <div style="margin: 20px 0; padding: 15px; background: #e8f4f8; border-radius: 5px;">
-              <p><strong>Status Pesanan:</strong> ${orderData.status || 'Pending'}</p>
+              <p><strong>Status Pesanan:</strong> ${
+                orderData.status || "Pending"
+              }</p>
               <p>Kami akan segera memproses pesanan Anda. Anda akan menerima email update ketika status pesanan berubah.</p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${frontendUrl}/order-status?order=${orderData.id}"
+                 style="display: inline-block; background: #d97706; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📦 Lacak Pesanan Saya
+              </a>
             </div>
           </div>
 
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email ini dikirim otomatis, mohon tidak membalas email ini.</p>
-            <p>&copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -173,59 +228,83 @@ class EmailService {
     `;
   }
 
-  getStatusUpdateTemplate(orderData, newStatus) {
+  getStatusUpdateTemplate(
+    orderData,
+    newStatus,
+    frontendUrl = "http://localhost:3001"
+  ) {
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
     const statusMessages = {
-      'pending': '⏳ Pesanan Anda Sedang Menunggu Pembayaran',
-      'processing': '📦 Pesanan Anda Sedang Diproses',
-      'shipped': '🚚 Pesanan Anda Telah Dikirim',
-      'delivered': '✅ Pesanan Anda Telah Sampai',
-      'cancelled': '❌ Pesanan Anda Telah Dibatalkan'
+      pending: "⏳ Pesanan Anda Sedang Menunggu Pembayaran",
+      processing: "📦 Pesanan Anda Sedang Diproses",
+      shipped: "🚚 Pesanan Anda Telah Dikirim",
+      delivered: "✅ Pesanan Anda Telah Sampai",
+      cancelled: "❌ Pesanan Anda Telah Dibatalkan",
     };
 
     const statusColors = {
-      'pending': '#f39c12',
-      'processing': '#3498db',
-      'shipped': '#9b59b6',
-      'delivered': '#27ae60',
-      'cancelled': '#e74c3c'
+      pending: "#f39c12",
+      processing: "#3498db",
+      shipped: "#9b59b6",
+      delivered: "#27ae60",
+      cancelled: "#e74c3c",
     };
 
     const statusDescriptions = {
-      'pending': 'Pesanan Anda telah kami terima dan sedang menunggu konfirmasi pembayaran. Silakan lakukan pembayaran untuk melanjutkan pesanan Anda.',
-      'processing': 'Pembayaran Anda telah dikonfirmasi! Tim kami sedang memproses dan mengemas pesanan Anda dengan hati-hati.',
-      'shipped': 'Pesanan Anda telah dikemas dan dikirim melalui kurir. Mohon untuk menunggu kedatangan paket Anda.',
-      'delivered': 'Pesanan Anda telah sampai di alamat tujuan. Terima kasih telah berbelanja di toko kami! Kami menantikan pesanan Anda berikutnya.',
-      'cancelled': 'Pesanan Anda telah dibatalkan. Jika Anda memiliki pertanyaan atau ingin melakukan pemesanan ulang, silakan hubungi kami.'
+      pending:
+        "Pesanan Anda telah kami terima dan sedang menunggu konfirmasi pembayaran. Silakan lakukan pembayaran untuk melanjutkan pesanan Anda.",
+      processing:
+        "Pembayaran Anda telah dikonfirmasi! Tim kami sedang memproses dan mengemas pesanan Anda dengan hati-hati.",
+      shipped:
+        "Pesanan Anda telah dikemas dan dikirim melalui kurir. Mohon untuk menunggu kedatangan paket Anda.",
+      delivered:
+        "Pesanan Anda telah sampai di alamat tujuan. Terima kasih telah berbelanja di toko kami! Kami menantikan pesanan Anda berikutnya.",
+      cancelled:
+        "Pesanan Anda telah dibatalkan. Jika Anda memiliki pertanyaan atau ingin melakukan pemesanan ulang, silakan hubungi kami.",
     };
 
-    const itemsHtml = orderData.items?.map(item => `
+    const itemsHtml =
+      orderData.items
+        ?.map(
+          (item) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.product_name || 'Produk'}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(item.price)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(item.subtotal)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${
+          item.product_name || "Produk"
+        }</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${
+          item.quantity
+        }</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(
+          item.price
+        )}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${formatCurrency(
+          item.subtotal
+        )}</td>
       </tr>
-    `).join('') || '';
+    `
+        )
+        .join("") || "";
 
     // Status-specific additional info
-    let statusSpecificContent = '';
+    let statusSpecificContent = "";
 
-    if (newStatus === 'pending') {
+    if (newStatus === "pending") {
       statusSpecificContent = `
         <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #f39c12;">
           <h4 style="margin-top: 0; color: #856404;">⚠️ Menunggu Pembayaran</h4>
           <p style="margin: 5px 0;">Silakan lakukan pembayaran untuk melanjutkan pesanan Anda.</p>
-          <p style="margin: 5px 0;"><strong>Total yang harus dibayar:</strong> ${formatCurrency(orderData.total)}</p>
+          <p style="margin: 5px 0;"><strong>Total yang harus dibayar:</strong> ${formatCurrency(
+            orderData.total
+          )}</p>
         </div>
       `;
-    } else if (newStatus === 'processing') {
+    } else if (newStatus === "processing") {
       statusSpecificContent = `
         <div style="margin: 20px 0; padding: 15px; background: #d1ecf1; border-radius: 5px; border-left: 4px solid #3498db;">
           <h4 style="margin-top: 0; color: #0c5460;">📦 Pesanan Sedang Dikemas</h4>
@@ -233,7 +312,7 @@ class EmailService {
           <p style="margin: 5px 0;">Estimasi pengiriman: 1-2 hari kerja</p>
         </div>
       `;
-    } else if (newStatus === 'shipped') {
+    } else if (newStatus === "shipped") {
       statusSpecificContent = `
         <div style="margin: 20px 0; padding: 15px; background: #e8daef; border-radius: 5px; border-left: 4px solid #9b59b6;">
           <h4 style="margin-top: 0; color: #6c3483;">🚚 Pesanan Dalam Perjalanan</h4>
@@ -244,7 +323,7 @@ class EmailService {
           <p style="margin: 5px 0; font-size: 12px; color: #666;">Mohon pastikan ada orang di alamat untuk menerima paket</p>
         </div>
       `;
-    } else if (newStatus === 'delivered') {
+    } else if (newStatus === "delivered") {
       statusSpecificContent = `
         <div style="margin: 20px 0; padding: 15px; background: #d4edda; border-radius: 5px; border-left: 4px solid #27ae60;">
           <h4 style="margin-top: 0; color: #155724;">✅ Pesanan Telah Diterima</h4>
@@ -253,7 +332,7 @@ class EmailService {
           <p style="margin: 10px 0 5px 0;"><strong>Butuh bantuan?</strong> Silakan hubungi customer service kami.</p>
         </div>
       `;
-    } else if (newStatus === 'cancelled') {
+    } else if (newStatus === "cancelled") {
       statusSpecificContent = `
         <div style="margin: 20px 0; padding: 15px; background: #f8d7da; border-radius: 5px; border-left: 4px solid #e74c3c;">
           <h4 style="margin-top: 0; color: #721c24;">❌ Pesanan Dibatalkan</h4>
@@ -275,8 +354,12 @@ class EmailService {
         <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 0; border-radius: 10px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1);">
 
           <!-- Header -->
-          <div style="background: ${statusColors[newStatus] || '#333'}; color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px;">${statusMessages[newStatus] || 'Update Status Pesanan'}</h1>
+          <div style="background: ${
+            statusColors[newStatus] || "#333"
+          }; color: white; padding: 30px 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 28px;">${
+              statusMessages[newStatus] || "Update Status Pesanan"
+            }</h1>
           </div>
 
           <!-- Content -->
@@ -287,7 +370,10 @@ class EmailService {
             </p>
 
             <p style="font-size: 14px; color: #666; line-height: 1.8;">
-              ${statusDescriptions[newStatus] || 'Status pesanan Anda telah diperbarui.'}
+              ${
+                statusDescriptions[newStatus] ||
+                "Status pesanan Anda telah diperbarui."
+              }
             </p>
 
             ${statusSpecificContent}
@@ -298,20 +384,26 @@ class EmailService {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Order ID:</td>
-                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">#${orderData.id}</td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">#${
+                    orderData.id
+                  }</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Tanggal Pesanan:</td>
-                  <td style="padding: 8px 0; text-align: right; color: #333;">${new Date(orderData.created_at).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
+                  <td style="padding: 8px 0; text-align: right; color: #333;">${new Date(
+                    orderData.created_at
+                  ).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Status:</td>
                   <td style="padding: 8px 0; text-align: right;">
-                    <span style="background: ${statusColors[newStatus]}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                    <span style="background: ${
+                      statusColors[newStatus]
+                    }; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
                       ${newStatus.toUpperCase()}
                     </span>
                   </td>
@@ -320,7 +412,9 @@ class EmailService {
             </div>
 
             <!-- Items -->
-            ${itemsHtml ? `
+            ${
+              itemsHtml
+                ? `
             <div style="margin: 30px 0;">
               <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Item Pesanan</h3>
               <table style="width: 100%; border-collapse: collapse; background: white;">
@@ -338,12 +432,26 @@ class EmailService {
                 <tfoot>
                   <tr>
                     <td colspan="3" style="padding: 15px 10px 10px 10px; text-align: right; font-weight: bold; font-size: 16px; border-top: 2px solid #333;">Total:</td>
-                    <td style="padding: 15px 10px 10px 10px; text-align: right; font-weight: bold; font-size: 16px; color: ${statusColors[newStatus]}; border-top: 2px solid #333;">${formatCurrency(orderData.total)}</td>
+                    <td style="padding: 15px 10px 10px 10px; text-align: right; font-weight: bold; font-size: 16px; color: ${
+                      statusColors[newStatus]
+                    }; border-top: 2px solid #333;">${formatCurrency(
+                    orderData.total
+                  )}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
+
+            <!-- Track Order Button -->
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${frontendUrl}/order-status?order=${orderData.id}"
+                 style="display: inline-block; background: #d97706; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📦 Lihat Detail Pesanan
+              </a>
+            </div>
 
             <!-- Contact Info -->
             <div style="margin: 30px 0; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 1px solid #b3d9ff;">
@@ -361,7 +469,9 @@ class EmailService {
               Email ini dikirim otomatis, mohon tidak membalas email ini.
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.
             </p>
           </div>
 
@@ -373,9 +483,9 @@ class EmailService {
 
   getAdminNotificationTemplate(orderData) {
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
@@ -398,14 +508,20 @@ class EmailService {
               <p><strong>Nama:</strong> ${orderData.customer_name}</p>
               <p><strong>Email:</strong> ${orderData.customer_email}</p>
               <p><strong>Telepon:</strong> ${orderData.customer_phone}</p>
-              <p><strong>Alamat:</strong> ${orderData.shipping_address}, ${orderData.shipping_city} ${orderData.shipping_postal}</p>
+              <p><strong>Alamat:</strong> ${orderData.shipping_address}, ${
+      orderData.shipping_city
+    } ${orderData.shipping_postal}</p>
             </div>
 
             <div style="margin: 20px 0;">
               <h3>Detail Pesanan:</h3>
-              <p><strong>Total Pesanan:</strong> ${formatCurrency(orderData.total)}</p>
-              <p><strong>Waktu Pesanan:</strong> ${new Date(orderData.created_at).toLocaleString('id-ID')}</p>
-              <p><strong>Status:</strong> ${orderData.status || 'Pending'}</p>
+              <p><strong>Total Pesanan:</strong> ${formatCurrency(
+                orderData.total
+              )}</p>
+              <p><strong>Waktu Pesanan:</strong> ${new Date(
+                orderData.created_at
+              ).toLocaleString("id-ID")}</p>
+              <p><strong>Status:</strong> ${orderData.status || "Pending"}</p>
             </div>
 
             <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 5px;">
@@ -416,7 +532,9 @@ class EmailService {
 
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email notifikasi admin</p>
-            <p>&copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -426,12 +544,12 @@ class EmailService {
 
   async testEmailConnection() {
     if (!this.transporter) {
-      return { success: false, message: 'Email transporter not configured' };
+      return { success: false, message: "Email transporter not configured" };
     }
 
     try {
       await this.transporter.verify();
-      return { success: true, message: 'Email connection successful' };
+      return { success: true, message: "Email connection successful" };
     } catch (error) {
       return { success: false, message: error.message };
     }
@@ -439,15 +557,21 @@ class EmailService {
 
   // Notifikasi ke admin saat customer upload bukti transfer
   async sendPaymentUploadedNotification(orderData, paymentData) {
-    if (!this.transporter || !process.env.SMTP_USER || !process.env.ADMIN_EMAIL) {
-      console.log('Email not configured, skipping payment uploaded notification');
+    if (
+      !this.transporter ||
+      !process.env.SMTP_USER ||
+      !process.env.ADMIN_EMAIL
+    ) {
+      console.log(
+        "Email not configured, skipping payment uploaded notification"
+      );
       return false;
     }
 
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
@@ -480,11 +604,21 @@ class EmailService {
             <div style="margin: 20px 0;">
               <h3>Detail Pembayaran:</h3>
               <p><strong>Metode:</strong> ${paymentData.payment_method}</p>
-              <p><strong>Bank:</strong> ${paymentData.bank_name || '-'}</p>
-              <p><strong>Nama Pengirim:</strong> ${paymentData.account_holder || '-'}</p>
-              <p><strong>Jumlah:</strong> ${formatCurrency(paymentData.amount)}</p>
-              <p><strong>Total Pesanan:</strong> ${formatCurrency(orderData.total)}</p>
-              ${paymentData.notes ? `<p><strong>Catatan:</strong> ${paymentData.notes}</p>` : ''}
+              <p><strong>Bank:</strong> ${paymentData.bank_name || "-"}</p>
+              <p><strong>Nama Pengirim:</strong> ${
+                paymentData.account_holder || "-"
+              }</p>
+              <p><strong>Jumlah:</strong> ${formatCurrency(
+                paymentData.amount
+              )}</p>
+              <p><strong>Total Pesanan:</strong> ${formatCurrency(
+                orderData.total
+              )}</p>
+              ${
+                paymentData.notes
+                  ? `<p><strong>Catatan:</strong> ${paymentData.notes}</p>`
+                  : ""
+              }
             </div>
 
             <div style="margin: 20px 0; padding: 15px; background: #e8f4f8; border-radius: 5px;">
@@ -495,7 +629,9 @@ class EmailService {
 
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email notifikasi admin</p>
-            <p>&copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -504,16 +640,21 @@ class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: process.env.ADMIN_EMAIL,
         subject: `🔔 Bukti Transfer Baru - Order #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
-      console.log('Payment uploaded notification sent to admin');
+      console.log("Payment uploaded notification sent to admin");
       return true;
     } catch (error) {
-      console.error('Failed to send payment uploaded notification:', error.message);
+      console.error(
+        "Failed to send payment uploaded notification:",
+        error.message
+      );
       return false;
     }
   }
@@ -521,14 +662,17 @@ class EmailService {
   // Notifikasi ke customer saat pembayaran diverifikasi
   async sendPaymentVerifiedNotification(orderData, paymentData) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping payment verified notification');
+      console.log(
+        "Email not configured, skipping payment verified notification"
+      );
       return false;
     }
 
+    const config = await notificationConfig.getAll();
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
@@ -557,8 +701,12 @@ class EmailService {
 
             <div style="margin: 20px 0; padding: 20px; background: #d4edda; border-radius: 8px; border-left: 4px solid #27ae60;">
               <h4 style="margin-top: 0; color: #155724;">✅ Pembayaran Berhasil Diverifikasi</h4>
-              <p style="margin: 5px 0;"><strong>Jumlah Dibayar:</strong> ${formatCurrency(paymentData.amount)}</p>
-              <p style="margin: 5px 0;"><strong>Tanggal Verifikasi:</strong> ${new Date(paymentData.verified_at).toLocaleDateString('id-ID')}</p>
+              <p style="margin: 5px 0;"><strong>Jumlah Dibayar:</strong> ${formatCurrency(
+                paymentData.amount
+              )}</p>
+              <p style="margin: 5px 0;"><strong>Tanggal Verifikasi:</strong> ${new Date(
+                paymentData.verified_at
+              ).toLocaleDateString("id-ID")}</p>
               <p style="margin: 10px 0 5px 0;">Terima kasih atas pembayarannya! 🙏</p>
             </div>
 
@@ -573,6 +721,15 @@ class EmailService {
               <p style="margin: 0; font-size: 14px;"><strong>📦 Langkah Selanjutnya:</strong></p>
               <p style="margin: 5px 0; font-size: 14px;">Pesanan Anda sedang dikemas dan akan segera dikirim. Anda akan menerima email update ketika pesanan sudah dikirim.</p>
             </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${config.frontend_url}/order-status?order=${
+      orderData.id
+    }"
+                 style="display: inline-block; background: #d97706; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📦 Lacak Pesanan Saya
+              </a>
+            </div>
           </div>
 
           <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
@@ -580,7 +737,9 @@ class EmailService {
               Email ini dikirim otomatis, mohon tidak membalas email ini.
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.
             </p>
           </div>
 
@@ -591,16 +750,18 @@ class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: orderData.customer_email,
         subject: `✅ Pembayaran Terverifikasi - Order #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
       console.log(`Payment verified email sent to ${orderData.customer_email}`);
       return true;
     } catch (error) {
-      console.error('Failed to send payment verified email:', error.message);
+      console.error("Failed to send payment verified email:", error.message);
       return false;
     }
   }
@@ -608,14 +769,15 @@ class EmailService {
   // Notifikasi ke customer saat berhasil upload bukti transfer
   async sendPaymentUploadConfirmation(orderData, paymentData) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping payment upload confirmation');
+      console.log("Email not configured, skipping payment upload confirmation");
       return false;
     }
 
+    const config = await notificationConfig.getAll();
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
@@ -639,7 +801,9 @@ class EmailService {
             </p>
 
             <p style="font-size: 14px; color: #666; line-height: 1.8;">
-              Terima kasih! Kami telah menerima bukti transfer Anda untuk pesanan #${orderData.id}.
+              Terima kasih! Kami telah menerima bukti transfer Anda untuk pesanan #${
+                orderData.id
+              }.
             </p>
 
             <div style="margin: 20px 0; padding: 20px; background: #d1ecf1; border-radius: 8px; border-left: 4px solid #3498db;">
@@ -654,25 +818,37 @@ class EmailService {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Order ID:</td>
-                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">#${orderData.id}</td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">#${
+                    orderData.id
+                  }</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Metode Pembayaran:</td>
-                  <td style="padding: 8px 0; text-align: right; color: #333;">${paymentData.payment_method}</td>
+                  <td style="padding: 8px 0; text-align: right; color: #333;">${
+                    paymentData.payment_method
+                  }</td>
                 </tr>
-                ${paymentData.bank_name ? `
+                ${
+                  paymentData.bank_name
+                    ? `
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Bank:</td>
                   <td style="padding: 8px 0; text-align: right; color: #333;">${paymentData.bank_name}</td>
                 </tr>
-                ` : ''}
+                `
+                    : ""
+                }
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Jumlah Transfer:</td>
-                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #27ae60;">${formatCurrency(paymentData.amount)}</td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #27ae60;">${formatCurrency(
+                    paymentData.amount
+                  )}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Total Pesanan:</td>
-                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">${formatCurrency(orderData.total)}</td>
+                  <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #333;">${formatCurrency(
+                    orderData.total
+                  )}</td>
                 </tr>
               </table>
             </div>
@@ -688,6 +864,15 @@ class EmailService {
                 Jika Anda memiliki pertanyaan tentang pembayaran, silakan hubungi customer service kami.
               </p>
             </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${config.frontend_url}/order-status?order=${
+      orderData.id
+    }"
+                 style="display: inline-block; background: #d97706; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📦 Cek Status Pesanan
+              </a>
+            </div>
           </div>
 
           <div style="background: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eee;">
@@ -695,7 +880,9 @@ class EmailService {
               Email ini dikirim otomatis, mohon tidak membalas email ini.
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.
             </p>
           </div>
 
@@ -706,16 +893,23 @@ class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: orderData.customer_email,
         subject: `✅ Bukti Transfer Diterima - Order #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
-      console.log(`Payment upload confirmation sent to ${orderData.customer_email}`);
+      console.log(
+        `Payment upload confirmation sent to ${orderData.customer_email}`
+      );
       return true;
     } catch (error) {
-      console.error('Failed to send payment upload confirmation:', error.message);
+      console.error(
+        "Failed to send payment upload confirmation:",
+        error.message
+      );
       return false;
     }
   }
@@ -723,14 +917,17 @@ class EmailService {
   // Notifikasi ke customer saat pembayaran ditolak
   async sendPaymentRejectedNotification(orderData, paymentData) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping payment rejected notification');
+      console.log(
+        "Email not configured, skipping payment rejected notification"
+      );
       return false;
     }
 
+    const config = await notificationConfig.getAll();
     const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR'
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
       }).format(amount);
     };
 
@@ -754,7 +951,9 @@ class EmailService {
             </p>
 
             <p style="font-size: 14px; color: #666; line-height: 1.8;">
-              Mohon maaf, pembayaran Anda untuk Order #${orderData.id} tidak dapat diverifikasi.
+              Mohon maaf, pembayaran Anda untuk Order #${
+                orderData.id
+              } tidak dapat diverifikasi.
             </p>
 
             <div style="margin: 20px 0; padding: 20px; background: #f8d7da; border-radius: 8px; border-left: 4px solid #e74c3c;">
@@ -779,7 +978,13 @@ class EmailService {
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <p style="margin: 0; font-size: 14px;">Jika Anda memiliki pertanyaan, silakan hubungi customer service kami.</p>
+              <a href="${config.frontend_url}/order-status?order=${
+      orderData.id
+    }"
+                 style="display: inline-block; background: #d97706; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📤 Upload Bukti Transfer Ulang
+              </a>
+              <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">Jika Anda memiliki pertanyaan, silakan hubungi customer service kami.</p>
             </div>
           </div>
 
@@ -788,7 +993,9 @@ class EmailService {
               Email ini dikirim otomatis, mohon tidak membalas email ini.
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.
             </p>
           </div>
 
@@ -799,30 +1006,32 @@ class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || 'Batik Store'}" <${process.env.SMTP_USER}>`,
+        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
+          process.env.SMTP_USER
+        }>`,
         to: orderData.customer_email,
         subject: `⚠️ Pembayaran Ditolak - Order #${orderData.id}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
       console.log(`Payment rejected email sent to ${orderData.customer_email}`);
       return true;
     } catch (error) {
-      console.error('Failed to send payment rejected email:', error.message);
+      console.error("Failed to send payment rejected email:", error.message);
       return false;
     }
   }
 
   async sendContactForm(contactData, adminEmail) {
     if (!this.transporter || !process.env.SMTP_USER) {
-      console.log('Email not configured, skipping contact form');
+      console.log("Email not configured, skipping contact form");
       return false;
     }
 
     const emailTo = adminEmail || process.env.ADMIN_EMAIL;
 
     if (!emailTo) {
-      console.log('Admin email not configured');
+      console.log("Admin email not configured");
       return false;
     }
 
@@ -842,7 +1051,9 @@ class EmailService {
 
           <div style="padding: 30px 20px;">
             <div style="margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #f39c12;">
-              <h4 style="margin-top: 0; color: #856404;">📋 ${contactData.subject}</h4>
+              <h4 style="margin-top: 0; color: #856404;">📋 ${
+                contactData.subject
+              }</h4>
               <p style="margin: 5px 0;">Anda menerima pesan baru dari contact form website.</p>
             </div>
 
@@ -851,19 +1062,27 @@ class EmailService {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #666; width: 40%;">Nama:</td>
-                  <td style="padding: 8px 0; font-weight: bold; color: #333;">${contactData.name}</td>
+                  <td style="padding: 8px 0; font-weight: bold; color: #333;">${
+                    contactData.name
+                  }</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Email:</td>
-                  <td style="padding: 8px 0; color: #333;">${contactData.email}</td>
+                  <td style="padding: 8px 0; color: #333;">${
+                    contactData.email
+                  }</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Subjek:</td>
-                  <td style="padding: 8px 0; color: #333;">${contactData.subject}</td>
+                  <td style="padding: 8px 0; color: #333;">${
+                    contactData.subject
+                  }</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Tanggal:</td>
-                  <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString('id-ID')}</td>
+                  <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString(
+                    "id-ID"
+                  )}</td>
                 </tr>
               </table>
             </div>
@@ -871,14 +1090,18 @@ class EmailService {
             <div style="margin: 30px 0; padding: 20px; background: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0;">
               <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">Pesan</h3>
               <div style="padding: 15px; background: #f9f9f9; border-radius: 5px;">
-                <p style="margin: 0; color: #333; white-space: pre-wrap;">${contactData.message}</p>
+                <p style="margin: 0; color: #333; white-space: pre-wrap;">${
+                  contactData.message
+                }</p>
               </div>
             </div>
 
             <div style="margin: 30px 0; padding: 20px; background: #e8f4f8; border-radius: 8px;">
               <p style="margin: 0; font-size: 14px; color: #333;">
                 <strong>📞 Untuk membalas:</strong><br>
-                Silakan balas langsung ke email: <a href="mailto:${contactData.email}" style="color: #d97706;">${contactData.email}</a>
+                Silakan balas langsung ke email: <a href="mailto:${
+                  contactData.email
+                }" style="color: #d97706;">${contactData.email}</a>
               </p>
             </div>
           </div>
@@ -888,7 +1111,9 @@ class EmailService {
               Pesan ini dikirim otomatis dari contact form website
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${process.env.SHOP_NAME || 'Batik Store'}. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${
+      process.env.SHOP_NAME || "Batik Store"
+    }. All rights reserved.
             </p>
           </div>
 
@@ -903,13 +1128,13 @@ class EmailService {
         to: emailTo,
         replyTo: contactData.email,
         subject: `[Contact Form] ${contactData.subject} - dari ${contactData.name}`,
-        html: emailTemplate
+        html: emailTemplate,
       });
 
       console.log(`Contact form email sent to ${emailTo}`);
       return true;
     } catch (error) {
-      console.error('Failed to send contact form email:', error.message);
+      console.error("Failed to send contact form email:", error.message);
       return false;
     }
   }

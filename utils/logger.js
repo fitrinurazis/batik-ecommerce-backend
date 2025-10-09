@@ -86,10 +86,19 @@ class Logger {
     }
   }
 
+  // Simple log method untuk replacement console.log
+  log(...args) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(...args);
+    }
+  }
+
   async info(message, meta = {}) {
     const logLevel = process.env.LOG_LEVEL || 'info';
     if (this.shouldLog('info', logLevel)) {
-      console.log(`[INFO] ${message}`, Object.keys(meta).length ? meta : '');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[INFO] ${message}`, Object.keys(meta).length ? meta : '');
+      }
       const content = this.formatMessage('info', message, meta);
       await this.writeLog('app.log', content);
     }
@@ -98,7 +107,9 @@ class Logger {
   async error(message, meta = {}) {
     const logLevel = process.env.LOG_LEVEL || 'info';
     if (this.shouldLog('error', logLevel)) {
-      console.error(`[ERROR] ${message}`, Object.keys(meta).length ? meta : '');
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`[ERROR] ${message}`, Object.keys(meta).length ? meta : '');
+      }
       const content = this.formatMessage('error', message, meta);
       await this.writeLog('error.log', content);
 
@@ -110,7 +121,9 @@ class Logger {
   async warn(message, meta = {}) {
     const logLevel = process.env.LOG_LEVEL || 'info';
     if (this.shouldLog('warn', logLevel)) {
-      console.warn(`[WARN] ${message}`, Object.keys(meta).length ? meta : '');
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[WARN] ${message}`, Object.keys(meta).length ? meta : '');
+      }
       const content = this.formatMessage('warn', message, meta);
       await this.writeLog('app.log', content);
     }
@@ -119,14 +132,18 @@ class Logger {
   async debug(message, meta = {}) {
     const logLevel = process.env.LOG_LEVEL || 'info';
     if (this.shouldLog('debug', logLevel)) {
-      console.debug(`[DEBUG] ${message}`, Object.keys(meta).length ? meta : '');
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug(`[DEBUG] ${message}`, Object.keys(meta).length ? meta : '');
+      }
       const content = this.formatMessage('debug', message, meta);
       await this.writeLog('debug.log', content);
     }
   }
 
   async security(message, meta = {}) {
-    console.warn(`[SECURITY] ${message}`, Object.keys(meta).length ? meta : '');
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[SECURITY] ${message}`, Object.keys(meta).length ? meta : '');
+    }
     const content = this.formatMessage('security', message, meta);
     await this.writeLog('security.log', content);
 

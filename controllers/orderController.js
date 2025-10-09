@@ -4,6 +4,7 @@ const emailService = require('../utils/emailService');
 const whatsappService = require('../services/WhatsAppService');
 const { upload, processImage } = require('../utils/upload');
 const multer = require('multer');
+const logger = require('../utils/logger');
 
 const orderController = {
   async createOrder(req, res) {
@@ -25,18 +26,18 @@ const orderController = {
       // Kirim email konfirmasi ke pelanggan
       if (order_data.customer_email) {
         emailService.sendOrderConfirmation(createdOrder, order_data.customer_email)
-          .catch(error => console.log('Email confirmation failed:', error.message));
+          .catch(error => logger.log('Email confirmation failed:', error.message));
 
         // Kirim notifikasi ke admin
         emailService.sendAdminNotification(createdOrder)
-          .catch(error => console.log('Admin notification failed:', error.message));
+          .catch(error => logger.log('Admin notification failed:', error.message));
       }
 
       // Kirim WhatsApp notification jika enabled dan ready
       if (process.env.WHATSAPP_ENABLED === 'true' && order_data.customer_phone) {
         if (whatsappService.isReady) {
           whatsappService.sendOrderConfirmation(createdOrder)
-            .catch(error => console.log('WhatsApp notification failed:', error.message));
+            .catch(error => logger.log('WhatsApp notification failed:', error.message));
         }
       }
 
@@ -46,6 +47,8 @@ const orderController = {
       });
 
     } catch (error) {
+      console.error('Error creating order:', error);
+
       if (error.message.includes('Insufficient stock') ||
           error.message.includes('not found') ||
           error.message.includes('not available') ||
@@ -54,7 +57,7 @@ const orderController = {
         return res.status(400).json({ error: error.message });
       }
 
-      res.status(500).json({ error: 'Gagal membuat pesanan' });
+      res.status(500).json({ error: 'Gagal membuat pesanan', details: error.message });
     }
   },
 
@@ -96,6 +99,24 @@ const orderController = {
       res.json(order);
 
     } catch (error) {
+      res.status(500).json({ error: 'Gagal mengambil data pesanan' });
+    }
+  },
+
+  // Public endpoint for tracking orders without authentication
+  async trackOrder(req, res) {
+    try {
+      const { id } = req.params;
+      const order = await OrderService.getById(id);
+
+      if (!order) {
+        return res.status(404).json({ error: 'Pesanan tidak ditemukan' });
+      }
+
+      res.json({ order });
+
+    } catch (error) {
+      console.error('Error tracking order:', error);
       res.status(500).json({ error: 'Gagal mengambil data pesanan' });
     }
   },
