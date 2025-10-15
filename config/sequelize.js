@@ -32,8 +32,10 @@ const connectDB = async () => {
 
 const syncDB = async () => {
   try {
-    await sequelize.sync({ alter: false });
-    console.log('✅ Database synchronized successfully.');
+    // Instead of sync, we'll use migrations
+    // sequelize.sync() should not be used in production
+    // Migrations are run separately before starting the server
+    console.log('✅ Using migrations instead of sync. Run migrations separately.');
   } catch (error) {
     console.error('❌ Unable to sync database:', error);
     throw error;

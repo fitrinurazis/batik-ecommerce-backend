@@ -353,7 +353,7 @@ ${new Date(payment.created_at).toLocaleString("id-ID")}
 Silakan verifikasi pembayaran melalui admin panel.
 
 Link: ${
-      process.env.ADMIN_URL || "http://localhost:3000/admin"
+      process.env.ADMIN_URL || "https://admin30.fitrinurazis.com"
     }/payments/pending`;
 
     return await this.sendMessage(adminPhone, message);

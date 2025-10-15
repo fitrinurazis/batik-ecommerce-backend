@@ -29,7 +29,7 @@ const Setting = sequelize.define('Setting', {
     type: DataTypes.STRING(50),
     allowNull: false,
     validate: {
-      isIn: [['general', 'email', 'payment', 'shipping', 'security', 'system', 'notification']]
+      isIn: [['general', 'shop', 'email', 'payment', 'shipping', 'security', 'system', 'notification']]
     }
   },
   description: {

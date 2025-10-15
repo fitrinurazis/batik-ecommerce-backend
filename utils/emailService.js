@@ -4,23 +4,32 @@ const notificationConfig = require("./notificationConfig");
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.initializeTransporter();
   }
 
-  initializeTransporter() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === "true",
+  async getTransporter() {
+    // Get latest settings from database with fallback to env
+    const config = await notificationConfig.getAll();
+
+    if (!config.smtp_user || !config.smtp_pass) {
+      console.log("Email not configured (missing credentials)");
+      return null;
+    }
+
+    // Create transporter with latest settings
+    return nodemailer.createTransport({
+      host: config.smtp_host || "smtp.gmail.com",
+      port: parseInt(config.smtp_port) || 587,
+      secure: config.smtp_secure === true || config.smtp_secure === "true",
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: config.smtp_user,
+        pass: config.smtp_pass,
       },
     });
   }
 
   async sendOrderConfirmation(orderData, customerEmail) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       console.log("Email not configured, skipping order confirmation");
       return false;
     }
@@ -28,13 +37,14 @@ class EmailService {
     const config = await notificationConfig.getAll();
     const emailTemplate = this.getOrderConfirmationTemplate(
       orderData,
-      config.frontend_url
+      config.frontend_url,
+      config.shop_name
     );
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
         to: customerEmail,
         subject: `Konfirmasi Pesanan #${orderData.id}`,
@@ -50,7 +60,8 @@ class EmailService {
   }
 
   async sendOrderStatusUpdate(orderData, customerEmail, newStatus) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       console.log("Email not configured, skipping status update");
       return false;
     }
@@ -59,13 +70,14 @@ class EmailService {
     const emailTemplate = this.getStatusUpdateTemplate(
       orderData,
       newStatus,
-      config.frontend_url
+      config.frontend_url,
+      config.shop_name
     );
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
         to: customerEmail,
         subject: `Update Status Pesanan #${orderData.id}`,
@@ -81,23 +93,22 @@ class EmailService {
   }
 
   async sendAdminNotification(orderData) {
-    if (
-      !this.transporter ||
-      !process.env.SMTP_USER ||
-      !process.env.ADMIN_EMAIL
-    ) {
+    const transporter = await this.getTransporter();
+    const config = await notificationConfig.getAll();
+
+    if (!transporter || !config.admin_email) {
       console.log("Email not configured, skipping admin notification");
       return false;
     }
 
-    const emailTemplate = this.getAdminNotificationTemplate(orderData);
+    const emailTemplate = this.getAdminNotificationTemplate(orderData, config.shop_name);
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
-        to: process.env.ADMIN_EMAIL,
+        to: config.admin_email,
         subject: `Pesanan Baru #${orderData.id}`,
         html: emailTemplate,
       });
@@ -112,7 +123,8 @@ class EmailService {
 
   getOrderConfirmationTemplate(
     orderData,
-    frontendUrl = "http://localhost:3001"
+    frontendUrl = "https://ecommerce.fitrinurazis.com",
+    shopName = "Batik Store"
   ) {
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat("id-ID", {
@@ -218,9 +230,7 @@ class EmailService {
 
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email ini dikirim otomatis, mohon tidak membalas email ini.</p>
-            <p>&copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
-    }. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} ${shopName}. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -231,7 +241,8 @@ class EmailService {
   getStatusUpdateTemplate(
     orderData,
     newStatus,
-    frontendUrl = "http://localhost:3001"
+    frontendUrl = "https://ecommerce.fitrinurazis.com",
+    shopName = "Batik Store"
   ) {
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat("id-ID", {
@@ -469,9 +480,7 @@ class EmailService {
               Email ini dikirim otomatis, mohon tidak membalas email ini.
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
-              &copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
-    }. All rights reserved.
+              &copy; ${new Date().getFullYear()} ${shopName}. All rights reserved.
             </p>
           </div>
 
@@ -481,7 +490,7 @@ class EmailService {
     `;
   }
 
-  getAdminNotificationTemplate(orderData) {
+  getAdminNotificationTemplate(orderData, shopName = "Batik Store") {
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat("id-ID", {
         style: "currency",
@@ -532,9 +541,7 @@ class EmailService {
 
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email notifikasi admin</p>
-            <p>&copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
-    }. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} ${shopName}. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -543,12 +550,13 @@ class EmailService {
   }
 
   async testEmailConnection() {
-    if (!this.transporter) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       return { success: false, message: "Email transporter not configured" };
     }
 
     try {
-      await this.transporter.verify();
+      await transporter.verify();
       return { success: true, message: "Email connection successful" };
     } catch (error) {
       return { success: false, message: error.message };
@@ -557,11 +565,10 @@ class EmailService {
 
   // Notifikasi ke admin saat customer upload bukti transfer
   async sendPaymentUploadedNotification(orderData, paymentData) {
-    if (
-      !this.transporter ||
-      !process.env.SMTP_USER ||
-      !process.env.ADMIN_EMAIL
-    ) {
+    const transporter = await this.getTransporter();
+    const config = await notificationConfig.getAll();
+
+    if (!transporter || !config.admin_email) {
       console.log(
         "Email not configured, skipping payment uploaded notification"
       );
@@ -630,7 +637,7 @@ class EmailService {
           <div style="text-align: center; margin: 20px 0; color: #666; font-size: 12px;">
             <p>Email notifikasi admin</p>
             <p>&copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
+      config.shop_name || "Batik Store"
     }. All rights reserved.</p>
           </div>
         </div>
@@ -639,11 +646,11 @@ class EmailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
-        to: process.env.ADMIN_EMAIL,
+        to: config.admin_email,
         subject: `🔔 Bukti Transfer Baru - Order #${orderData.id}`,
         html: emailTemplate,
       });
@@ -661,7 +668,8 @@ class EmailService {
 
   // Notifikasi ke customer saat pembayaran diverifikasi
   async sendPaymentVerifiedNotification(orderData, paymentData) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       console.log(
         "Email not configured, skipping payment verified notification"
       );
@@ -738,7 +746,7 @@ class EmailService {
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
               &copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
+      config.shop_name || "Batik Store"
     }. All rights reserved.
             </p>
           </div>
@@ -749,9 +757,9 @@ class EmailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
         to: orderData.customer_email,
         subject: `✅ Pembayaran Terverifikasi - Order #${orderData.id}`,
@@ -768,7 +776,8 @@ class EmailService {
 
   // Notifikasi ke customer saat berhasil upload bukti transfer
   async sendPaymentUploadConfirmation(orderData, paymentData) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       console.log("Email not configured, skipping payment upload confirmation");
       return false;
     }
@@ -881,7 +890,7 @@ class EmailService {
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
               &copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
+      config.shop_name || "Batik Store"
     }. All rights reserved.
             </p>
           </div>
@@ -892,9 +901,9 @@ class EmailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
         to: orderData.customer_email,
         subject: `✅ Bukti Transfer Diterima - Order #${orderData.id}`,
@@ -916,7 +925,8 @@ class EmailService {
 
   // Notifikasi ke customer saat pembayaran ditolak
   async sendPaymentRejectedNotification(orderData, paymentData) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    if (!transporter) {
       console.log(
         "Email not configured, skipping payment rejected notification"
       );
@@ -994,7 +1004,7 @@ class EmailService {
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
               &copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
+      config.shop_name || "Batik Store"
     }. All rights reserved.
             </p>
           </div>
@@ -1005,9 +1015,9 @@ class EmailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: `"${process.env.SHOP_NAME || "Batik Store"}" <${
-          process.env.SMTP_USER
+      await transporter.sendMail({
+        from: `"${config.shop_name || "Batik Store"}" <${
+          config.smtp_user
         }>`,
         to: orderData.customer_email,
         subject: `⚠️ Pembayaran Ditolak - Order #${orderData.id}`,
@@ -1023,12 +1033,15 @@ class EmailService {
   }
 
   async sendContactForm(contactData, adminEmail) {
-    if (!this.transporter || !process.env.SMTP_USER) {
+    const transporter = await this.getTransporter();
+    const config = await notificationConfig.getAll();
+
+    if (!transporter) {
       console.log("Email not configured, skipping contact form");
       return false;
     }
 
-    const emailTo = adminEmail || process.env.ADMIN_EMAIL;
+    const emailTo = adminEmail || config.admin_email;
 
     if (!emailTo) {
       console.log("Admin email not configured");
@@ -1112,7 +1125,7 @@ class EmailService {
             </p>
             <p style="margin: 5px 0; color: #666; font-size: 12px;">
               &copy; ${new Date().getFullYear()} ${
-      process.env.SHOP_NAME || "Batik Store"
+      config.shop_name || "Batik Store"
     }. All rights reserved.
             </p>
           </div>
@@ -1123,8 +1136,8 @@ class EmailService {
     `;
 
     try {
-      await this.transporter.sendMail({
-        from: `"${contactData.name}" <${process.env.SMTP_USER}>`,
+      await transporter.sendMail({
+        from: `"${contactData.name}" <${config.smtp_user}>`,
         to: emailTo,
         replyTo: contactData.email,
         subject: `[Contact Form] ${contactData.subject} - dari ${contactData.name}`,

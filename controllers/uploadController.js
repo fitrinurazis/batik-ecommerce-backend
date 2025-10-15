@@ -43,6 +43,8 @@ const uploadController = {
       });
 
     } catch (error) {
+      console.error('Upload Controller - Error uploading image:', error);
+      console.error('Upload Controller - Error stack:', error.stack);
 
       if (error.message === 'Invalid image file') {
         return res.status(400).json({ error: 'Format file gambar tidak valid' });
@@ -52,7 +54,10 @@ const uploadController = {
         return res.status(400).json({ error: 'Ukuran file terlalu besar' });
       }
 
-      res.status(500).json({ error: 'Gagal mengupload gambar' });
+      res.status(500).json({
+        error: 'Gagal mengupload gambar',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 

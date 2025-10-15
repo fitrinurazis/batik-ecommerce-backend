@@ -4,7 +4,15 @@ const paymentController = require('../controllers/paymentController');
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { body } = require('express-validator');
+
+// Ensure uploads/payments directory exists
+const uploadDir = 'uploads/payments';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log(`Created directory: ${uploadDir}`);
+}
 
 // Configure multer for payment proof uploads
 const storage = multer.diskStorage({

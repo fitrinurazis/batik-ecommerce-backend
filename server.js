@@ -23,26 +23,43 @@ const {
   attackDetection,
 } = require("./middleware/security");
 
-app.use(helmet());
-app.use(securityHeaders);
+// Custom CORS middleware - MUST be before any other middleware
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://ecommerce.fitrinurazis.com",
+    "https://admin30.fitrinurazis.com",
+  ];
+
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+    res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+// Helmet disabled temporarily to fix CORS - re-enable after testing
+// app.use(helmet());
+
 app.use(validateIP);
 app.use(requestLogger);
-
-app.use(
-  cors({
-    origin: [
-      "http://localhost:8080",
-      "http://127.0.0.1:8080",
-      "http://localhost:8081",
-      "http://127.0.0.1:8081",
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
 
 app.use("/api/", apiRateLimit);
 app.use("/api/auth/", authRateLimit);

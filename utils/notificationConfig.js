@@ -73,11 +73,11 @@ class NotificationConfig {
             : process.env.WHATSAPP_ENABLED === "true",
         admin_phone: config.admin_phone || process.env.ADMIN_PHONE,
         admin_url:
-          config.admin_url || process.env.ADMIN_URL || "http://localhost:3000",
+          config.admin_url || process.env.ADMIN_URL || "https://admin30.fitrinurazis.com",
         frontend_url:
           config.frontend_url ||
           process.env.FRONTEND_URL ||
-          "http://localhost:3001",
+          "https://ecommerce.fitrinurazis.com",
       };
     } catch (error) {
       console.error("Error getting all notification config:", error.message);
@@ -93,8 +93,8 @@ class NotificationConfig {
         shop_name: process.env.SHOP_NAME || "Batik Store",
         whatsapp_enabled: process.env.WHATSAPP_ENABLED === "true",
         admin_phone: process.env.ADMIN_PHONE,
-        admin_url: process.env.ADMIN_URL || "http://localhost:3000",
-        frontend_url: process.env.FRONTEND_URL || "http://localhost:3001",
+        admin_url: process.env.ADMIN_URL || "https://admin30.fitrinurazis.com",
+        frontend_url: process.env.FRONTEND_URL || "https://ecommerce.fitrinurazis.com",
       };
     }
   }

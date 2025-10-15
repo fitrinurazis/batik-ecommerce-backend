@@ -1,0 +1,47 @@
+
+
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+
+# Environment files
+.env.local
+.env.development
+.env.test
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Testing
+coverage/
+.nyc_output/
+
+# Uploads (if you have user uploads in development)
+uploads/temp/
+
+# Database files (if using SQLite locally)
+*.sqlite
+*.db
+
+# Misc
+.history/
+.cache/
+temp/
+tmp/
