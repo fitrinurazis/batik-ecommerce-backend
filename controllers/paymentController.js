@@ -104,6 +104,10 @@ const paymentController = {
           payment_status: payment.payment_status,
           payment_proof: payment.payment_proof,
           created_at: payment.created_at
+        },
+        notifications: {
+          email: order.customer_email,
+          phone: order.customer_phone
         }
       });
 

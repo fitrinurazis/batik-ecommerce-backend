@@ -175,7 +175,27 @@ class SettingsService {
         return 'general';
       };
 
-      for (const [key, value] of Object.entries(updates)) {
+      // Handle array format from frontend (array of {category, key, value})
+      // or object format (key-value pairs)
+      let settingsToUpdate = [];
+
+      if (Array.isArray(updates)) {
+        // Frontend sends array format: [{category, key, value}, ...]
+        settingsToUpdate = updates;
+      } else {
+        // Object format: {key: value, ...}
+        settingsToUpdate = Object.entries(updates).map(([key, value]) => ({
+          key,
+          value,
+          category: null // Will be determined by getCategoryFromKey
+        }));
+      }
+
+      for (const item of settingsToUpdate) {
+        const key = item.key;
+        const value = item.value;
+        const explicitCategory = item.category;
+
         let setting = await Setting.findOne({ where: { key } });
 
         if (setting) {
@@ -194,8 +214,8 @@ class SettingsService {
             type = 'json';
           }
 
-          // Determine category from key name
-          const category = getCategoryFromKey(key);
+          // Use explicit category if provided, otherwise determine from key name
+          const category = explicitCategory || getCategoryFromKey(key);
 
           // Create new setting
           setting = await Setting.create({

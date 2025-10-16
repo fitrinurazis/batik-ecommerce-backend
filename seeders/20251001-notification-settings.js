@@ -67,12 +67,32 @@ module.exports = {
         updated_at: now
       },
       {
+        key: 'email_from_name',
+        value: process.env.SHOP_NAME || 'Batik Store',
+        type: 'string',
+        category: 'notification',
+        description: 'Nama pengirim yang muncul di email',
+        is_public: false,
+        created_at: now,
+        updated_at: now
+      },
+      {
         key: 'shop_name',
         value: process.env.SHOP_NAME || 'Batik Store',
         type: 'string',
         category: 'notification',
         description: 'Nama toko untuk branding email',
         is_public: true,
+        created_at: now,
+        updated_at: now
+      },
+      {
+        key: 'frontend_url',
+        value: process.env.FRONTEND_URL || 'https://ecommerce.fitrinurazis.com',
+        type: 'string',
+        category: 'notification',
+        description: 'URL frontend untuk link tracking di email',
+        is_public: false,
         created_at: now,
         updated_at: now
       },
