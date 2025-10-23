@@ -26,14 +26,11 @@ const {
 // Custom CORS middleware - MUST be before any other middleware
 app.use((req, res, next) => {
   const allowedOrigins = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
-    "http://localhost:3000",
-    "http://localhost:3001",
+    "https://admindashboard.batikwindasari.my.id",
+    "https://batikwindasari.my.id",
     "https://ecommerce.fitrinurazis.com",
-    "https://admin30.fitrinurazis.com",
+    "https://admin30.fitrinurazis.com"
+
   ];
 
   const origin = req.headers.origin;

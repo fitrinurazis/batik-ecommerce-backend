@@ -180,6 +180,14 @@ class EmailService {
               <h3>Alamat Pengiriman:</h3>
               <p>${orderData.shipping_address}</p>
               <p>${orderData.shipping_city}, ${orderData.shipping_postal}</p>
+              ${
+                orderData.shipping_notes
+                  ? `<div style="margin-top: 10px; padding: 10px; background: #e8f4f8; border-left: 3px solid #3498db; border-radius: 3px;">
+                      <p style="margin: 0;"><strong>📝 Catatan Pengiriman:</strong></p>
+                      <p style="margin: 5px 0 0 0;">${orderData.shipping_notes}</p>
+                    </div>`
+                  : ""
+              }
             </div>
 
             <div style="margin: 20px 0;">
@@ -330,6 +338,14 @@ class EmailService {
           <p style="margin: 5px 0;"><strong>Alamat Pengiriman:</strong></p>
           <p style="margin: 5px 0;">${orderData.shipping_address}</p>
           <p style="margin: 5px 0;">${orderData.shipping_city}, ${orderData.shipping_postal}</p>
+          ${
+            orderData.shipping_notes
+              ? `<div style="margin-top: 10px; padding: 10px; background: #f0e6f7; border-radius: 3px;">
+                  <p style="margin: 0; font-size: 13px;"><strong>📝 Catatan Pengiriman:</strong></p>
+                  <p style="margin: 5px 0 0 0; font-size: 13px;">${orderData.shipping_notes}</p>
+                </div>`
+              : ""
+          }
           <p style="margin: 10px 0 5px 0;"><strong>Estimasi Tiba:</strong> 2-3 hari kerja</p>
           <p style="margin: 5px 0; font-size: 12px; color: #666;">Mohon pastikan ada orang di alamat untuk menerima paket</p>
         </div>

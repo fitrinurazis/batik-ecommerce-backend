@@ -192,6 +192,7 @@ Rp ${this.formatPrice(order.total)}
 
 📍 *Alamat Pengiriman:*
 ${order.shipping_address}
+${order.shipping_notes ? `\n📝 *Catatan Pengiriman:*\n${order.shipping_notes}` : ''}
 
 Silakan lakukan pembayaran untuk memproses pesanan Anda.
 🔗 *Link pembayaran:*
@@ -253,6 +254,10 @@ ${itemsList}
 
 💰 *Total Pembayaran:*
 Rp ${this.formatPrice(order.total)}
+
+📍 *Alamat Pengiriman:*
+${order.shipping_address}
+${order.shipping_notes ? `\n📝 *Catatan Pengiriman:*\n${order.shipping_notes}` : ''}
 
 ${this.getStatusMessage(order.status)}
 
